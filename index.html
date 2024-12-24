@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multiplayer Moving Ball Game</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background-color: black;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="gameCanvas"></canvas>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const socket = io("http://139.59.55.246/", { 
+        transports: ["websocket"],
+      });
+      let players = {};
+
+      const ballRadius = 20;
+      const speed = 5;
+
+      const keys = {
+        ArrowUp: false,
+        ArrowDown: false,
+        ArrowLeft: false,
+        ArrowRight: false,
+      };
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key in keys) {
+          keys[event.key] = true;
+          emitMovement();
+        }
+      });
+
+      window.addEventListener("keyup", (event) => {
+        if (event.key in keys) {
+          keys[event.key] = false;
+          emitMovement();
+        }
+      });
+
+      function emitMovement() {
+        socket.emit("move", keys);
+      }
+
+      socket.on("updatePlayers", (serverPlayers) => {
+        players = serverPlayers;
+      });
+
+      function drawBall(x, y, color) {
+        ctx.beginPath();
+        ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.closePath();
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (const id in players) {
+          const player = players[id];
+          drawBall(player.x, player.y, player.color);
+        }
+      }
+
+      function gameLoop() {
+        draw();
+        requestAnimationFrame(gameLoop);
+      }
+
+      gameLoop();
+    </script>
+  </body>
+</html>
